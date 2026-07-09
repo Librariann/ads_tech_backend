@@ -1,73 +1,60 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Ads Tech Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS API using PostgreSQL, TypeORM, JWT, Redis-backed sessions, and OAuth2.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
+## Local setup
 
 ```bash
-$ pnpm install
+npm install
+cp .env.example .env.dev
+docker compose up -d
+npm run start:dev
 ```
 
-## Running the app
+The API listens on `http://localhost:8000` by default.
+OAuth callbacks return to `FRONTEND_URL` after setting HttpOnly access and
+refresh-token cookies. When the frontend and API use separate subdomains in
+production, set `AUTH_COOKIE_DOMAIN` to their shared parent domain.
+
+## Authentication
+
+Local authentication:
+
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout` (Bearer token required)
+- `POST /auth/logout-all` (Bearer token required)
+- `GET /auth/me` (Bearer token required)
+
+OAuth2 entry points:
+
+- `GET /auth/oauth/google`
+- `GET /auth/oauth/naver`
+- `GET /auth/oauth/kakao`
+
+Register these callback URLs in each provider console:
+
+```text
+http://localhost:8000/auth/oauth/google/callback
+http://localhost:8000/auth/oauth/naver/callback
+http://localhost:8000/auth/oauth/kakao/callback
+```
+
+Set the matching client ID and secret values in `.env.dev`. Kakao's client
+secret is optional when that feature is disabled in the Kakao console.
+
+Access tokens are JWTs with a short lifetime. Refresh tokens are rotated on
+every use, while session state and refresh-token hashes are stored in Redis.
+Logging out removes the Redis session and immediately revokes its access token.
+
+## Verification
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+npm run build
+npm run lint
+NODE_ENV=dev npm run test:e2e -- --runInBand
 ```
 
-## Test
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+TypeORM schema synchronization is enabled outside production. Add and run
+database migrations before deploying with `NODE_ENV=production`.
