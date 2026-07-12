@@ -18,7 +18,7 @@ export enum OAuthProvider {
 @Entity({ name: 'oauth_accounts' })
 @Index(['provider', 'providerId'], { unique: true })
 export class OAuthAccount {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id: string;
 
   @Column({ type: 'enum', enum: OAuthProvider })
@@ -27,10 +27,10 @@ export class OAuthAccount {
   @Column({ name: 'provider_id' })
   providerId: string;
 
-  @Column()
+  @Column({ length: 320 })
   email: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'bigint' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.oauthAccounts, {
@@ -39,6 +39,6 @@ export class OAuthAccount {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }
