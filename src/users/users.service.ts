@@ -4,11 +4,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { OAuthAccount, OAuthProvider } from './entities/oauth-account.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+import {
+  BusinessProfile,
+  Workspace,
+  WorkspaceMember,
+} from '../database/entities/workspace.entity';
+import {
+  OnboardingStatus,
+  WorkspaceMemberStatus,
+  WorkspaceRole,
+  WorkspaceStatus,
+} from '../database/entities/enums';
 
 export type OAuthProfile = {
   provider: OAuthProvider;
@@ -25,6 +36,7 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(OAuthAccount)
     private readonly oauthAccountsRepository: Repository<OAuthAccount>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createUserDto: CreateUserDto, passwordHash: string) {
@@ -34,13 +46,17 @@ export class UsersService {
       throw new ConflictException('Email already exists');
     }
 
-    const user = this.usersRepository.create({
-      email: createUserDto.email.toLowerCase(),
-      passwordHash,
-      displayName: createUserDto.displayName,
-    });
+    return this.dataSource.transaction(async (manager) => {
+      const user = manager.create(User, {
+        email: createUserDto.email.toLowerCase(),
+        passwordHash,
+        displayName: createUserDto.displayName,
+      });
 
-    return this.usersRepository.save(user);
+      await manager.save(user);
+      await this.createPersonalWorkspace(manager, user);
+      return user;
+    });
   }
 
   findAll() {
@@ -94,7 +110,7 @@ export class UsersService {
     }
 
     const email = profile.email.toLowerCase();
-    let user = await this.findByEmail(email);
+    const user = await this.findByEmail(email);
 
     if (user && !profile.emailVerified) {
       throw new ConflictException(
@@ -103,12 +119,25 @@ export class UsersService {
     }
 
     if (!user) {
-      user = await this.usersRepository.save(
-        this.usersRepository.create({
+      return this.dataSource.transaction(async (manager) => {
+        const newUser = manager.create(User, {
           email,
           displayName: profile.displayName,
-        }),
-      );
+        });
+
+        await manager.save(newUser);
+        await this.createPersonalWorkspace(manager, newUser);
+        await manager.save(
+          manager.create(OAuthAccount, {
+            provider: profile.provider,
+            providerId: profile.providerId,
+            email,
+            userId: newUser.id,
+          }),
+        );
+
+        return newUser;
+      });
     }
 
     await this.oauthAccountsRepository.save(
@@ -136,7 +165,43 @@ export class UsersService {
 
   async remove(id: string) {
     const user = await this.findOne(id);
-    await this.usersRepository.remove(user);
+    await this.usersRepository.softRemove(user);
     return { deleted: true };
+  }
+
+  async purgeNewlyCreatedUser(id: string) {
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Workspace, { createdById: id });
+      await manager.delete(User, { id });
+    });
+  }
+
+  private async createPersonalWorkspace(manager: EntityManager, user: User) {
+    const label = user.displayName?.trim() || user.email.split('@')[0];
+    const workspace = manager.create(Workspace, {
+      name: `${label}의 워크스페이스`,
+      slug: `personal-${user.id}`,
+      status: WorkspaceStatus.ACTIVE,
+      defaultCurrency: 'KRW',
+      timezone: 'Asia/Seoul',
+      createdById: user.id,
+    });
+
+    await manager.save(workspace);
+    await manager.save(
+      manager.create(WorkspaceMember, {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: WorkspaceRole.OWNER,
+        status: WorkspaceMemberStatus.ACTIVE,
+        joinedAt: new Date(),
+      }),
+    );
+    await manager.save(
+      manager.create(BusinessProfile, {
+        workspaceId: workspace.id,
+        onboardingStatus: OnboardingStatus.NOT_STARTED,
+      }),
+    );
   }
 }
