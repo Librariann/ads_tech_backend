@@ -8,6 +8,7 @@ NestJS API using PostgreSQL, TypeORM, JWT, Redis-backed sessions, and OAuth2.
 npm install
 cp .env.example .env.dev
 docker compose up -d
+npm run migration:run
 npm run start:dev
 ```
 
@@ -58,5 +59,27 @@ npm run lint
 NODE_ENV=dev npm run test:e2e -- --runInBand
 ```
 
-TypeORM schema synchronization is enabled outside production. Add and run
-database migrations before deploying with `NODE_ENV=production`.
+TypeORM schema synchronization is disabled in every environment. Database
+changes are applied only through committed migrations.
+
+## Database migrations
+
+Schema synchronization is disabled in every environment. Apply committed
+migrations before starting the API:
+
+```bash
+npm run migration:show
+npm run migration:run
+```
+
+Create a migration after changing entity metadata:
+
+```bash
+npm run migration:generate -- src/database/migrations/DescribeChange
+```
+
+Revert only the latest migration:
+
+```bash
+npm run migration:revert
+```
