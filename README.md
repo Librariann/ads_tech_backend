@@ -11,10 +11,11 @@ docker compose up -d
 npm run start:dev
 ```
 
-The API listens on `http://localhost:8000` by default.
-OAuth callbacks return to `FRONTEND_URL` after setting HttpOnly access and
-refresh-token cookies. When the frontend and API use separate subdomains in
-production, set `AUTH_COOKIE_DOMAIN` to their shared parent domain.
+The API listens on `http://localhost:8000` by default. OAuth callbacks create a
+short-lived, single-use handoff code in Redis and redirect to
+`FRONTEND_URL/api/auth/oauth/callback`. The frontend exchanges that code
+server-to-server and sets its own HttpOnly access and refresh-token cookies, so
+the frontend and API can use unrelated domains.
 
 ## Authentication
 
@@ -32,6 +33,7 @@ OAuth2 entry points:
 - `GET /auth/oauth/google`
 - `GET /auth/oauth/naver`
 - `GET /auth/oauth/kakao`
+- `POST /auth/oauth/exchange` (single-use code exchange)
 
 Register these callback URLs in each provider console:
 

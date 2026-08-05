@@ -11,6 +11,7 @@ import { GoogleStrategy } from './oauth/google.strategy';
 import { NaverStrategy } from './oauth/naver.strategy';
 import { KakaoStrategy } from './oauth/kakao.strategy';
 import { OAuthStateService } from './oauth/oauth-state.service';
+import { OAuthHandoffService } from './oauth/oauth-handoff.service';
 import {
   GoogleOAuthGuard,
   KakaoOAuthGuard,
@@ -41,6 +42,7 @@ import {
     NaverStrategy,
     KakaoStrategy,
     OAuthStateService,
+    OAuthHandoffService,
     GoogleOAuthGuard,
     NaverOAuthGuard,
     KakaoOAuthGuard,

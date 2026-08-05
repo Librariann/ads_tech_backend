@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CookieOptions, Response } from 'express';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -20,12 +20,15 @@ import {
   NaverOAuthGuard,
 } from './oauth/oauth.guards';
 import { NormalizedOAuthProfile } from './types/oauth-profile.type';
+import { OAuthHandoffDto } from './dto/oauth-handoff.dto';
+import { OAuthHandoffService } from './oauth/oauth-handoff.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly oauthHandoffService: OAuthHandoffService,
   ) {}
 
   @Post('signup')
@@ -112,59 +115,25 @@ export class AuthController {
     return this.completeOAuth(request.user, response);
   }
 
+  @Post('oauth/exchange')
+  exchangeOAuthCode(@Body() handoffDto: OAuthHandoffDto) {
+    return this.oauthHandoffService.consume(handoffDto.code);
+  }
+
   private async completeOAuth(
     profile: NormalizedOAuthProfile,
     response: Response,
   ) {
     const tokens = await this.authService.oauthLogin(profile);
-
-    response.cookie(
-      'access_token',
-      tokens.accessToken,
-      this.cookieOptions('JWT_EXPIRES_IN', '15m'),
-    );
-    response.cookie(
-      'refresh_token',
-      tokens.refreshToken,
-      this.cookieOptions('REFRESH_TOKEN_EXPIRES_IN', '30d'),
-    );
+    const code = await this.oauthHandoffService.create(tokens);
 
     const frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
       'http://localhost:3000',
     );
+    const callbackUrl = new URL('/api/auth/oauth/callback', frontendUrl);
+    callbackUrl.searchParams.set('code', code);
 
-    return response.redirect(302, frontendUrl);
-  }
-
-  private cookieOptions(durationKey: string, fallback: string): CookieOptions {
-    const domain = this.configService.get<string>('AUTH_COOKIE_DOMAIN');
-    const value = this.configService.get<string>(durationKey, fallback);
-
-    return {
-      httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: this.parseDuration(value),
-      ...(domain ? { domain } : {}),
-    };
-  }
-
-  private parseDuration(value: string) {
-    const match = /^(\d+)([smhd])?$/.exec(value);
-    if (!match) {
-      throw new Error(`Invalid token duration: ${value}`);
-    }
-
-    const amount = Number(match[1]);
-    const unitMilliseconds = {
-      s: 1000,
-      m: 60 * 1000,
-      h: 60 * 60 * 1000,
-      d: 24 * 60 * 60 * 1000,
-    };
-
-    return amount * unitMilliseconds[match[2] || 's'];
+    return response.redirect(302, callbackUrl.toString());
   }
 }
