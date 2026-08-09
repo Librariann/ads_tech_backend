@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RedisModule } from './redis/redis.module';
+import { databaseEntities } from './database/entities';
 
 @Module({
   imports: [
@@ -22,8 +23,8 @@ import { RedisModule } from './redis/redis.module';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_DATABASE', 'ads_tech'),
-        autoLoadEntities: true,
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        entities: databaseEntities,
+        synchronize: true,
       }),
     }),
     RedisModule,
