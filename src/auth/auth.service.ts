@@ -25,7 +25,9 @@ export class AuthService {
     try {
       return await this.createAuthResponse(user.id, user.email);
     } catch (error) {
-      await this.usersService.remove(user.id).catch(() => undefined);
+      await this.usersService
+        .purgeNewlyCreatedUser(user.id)
+        .catch(() => undefined);
       throw error;
     }
   }
