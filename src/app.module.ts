@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RedisModule } from './redis/redis.module';
 import { databaseEntities } from './database/entities';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { databaseEntities } from './database/entities';
     RedisModule,
     UsersModule,
     AuthModule,
+    WorkspacesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

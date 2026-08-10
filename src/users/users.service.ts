@@ -19,6 +19,7 @@ import {
   WorkspaceMemberStatus,
   WorkspaceRole,
   WorkspaceStatus,
+  UserStatus,
 } from '../database/entities/enums';
 
 export type OAuthProfile = {
@@ -75,6 +76,12 @@ export class UsersService {
 
   findById(id: string) {
     return this.usersRepository.findOne({ where: { id } });
+  }
+
+  findActiveById(id: string) {
+    return this.usersRepository.findOne({
+      where: { id, status: UserStatus.ACTIVE },
+    });
   }
 
   findByEmail(email: string) {

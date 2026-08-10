@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { JwtPayload } from './types/jwt-payload.type';
 import { SessionService } from './session.service';
+import { AuthenticatedUser } from './types/authenticated-user.type';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -20,12 +21,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     if (!payload.sid || !(await this.sessionService.exists(payload.sid))) {
       throw new UnauthorizedException('Session expired or revoked');
     }
 
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.usersService.findActiveById(payload.sub);
 
     if (!user) {
       throw new UnauthorizedException();

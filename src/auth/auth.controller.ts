@@ -22,6 +22,8 @@ import {
 import { NormalizedOAuthProfile } from './types/oauth-profile.type';
 import { OAuthHandoffDto } from './dto/oauth-handoff.dto';
 import { OAuthHandoffService } from './oauth/oauth-handoff.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { AuthenticatedUser } from './types/authenticated-user.type';
 
 @Controller('auth')
 export class AuthController {
@@ -48,25 +50,25 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Request() request) {
-    await this.authService.logout(request.user.sessionId);
+  async logout(@CurrentUser() user: AuthenticatedUser) {
+    await this.authService.logout(user.sessionId);
     return { loggedOut: true };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('logout-all')
-  async logoutAll(@Request() request) {
-    await this.authService.logoutAll(request.user.id);
+  async logoutAll(@CurrentUser() user: AuthenticatedUser) {
+    await this.authService.logoutAll(user.id);
     return { loggedOut: true };
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  me(@Request() request) {
+  me(@CurrentUser() user: AuthenticatedUser) {
     return {
-      id: request.user.id,
-      email: request.user.email,
-      displayName: request.user.displayName,
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
     };
   }
 
