@@ -16,11 +16,18 @@ import {
 } from '../database/entities/workspace.entity';
 import {
   OnboardingStatus,
+  PaymentProvider,
+  SubscriptionStatus,
   WorkspaceMemberStatus,
   WorkspaceRole,
   WorkspaceStatus,
   UserStatus,
 } from '../database/entities/enums';
+import { Plan, Subscription } from '../database/entities/billing.entity';
+import {
+  CURRENT_PLAN_VERSION,
+  STARTER_PLAN_CODE,
+} from '../billing/plan-policy';
 
 export type OAuthProfile = {
   provider: OAuthProvider;
@@ -195,6 +202,26 @@ export class UsersService {
     });
 
     await manager.save(workspace);
+    const starterPlan = await manager.findOneByOrFail(Plan, {
+      code: STARTER_PLAN_CODE,
+      version: CURRENT_PLAN_VERSION,
+      isActive: true,
+    });
+    const currentPeriodStart = new Date();
+    const currentPeriodEnd = new Date(currentPeriodStart);
+    currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() + 1);
+
+    await manager.save(
+      manager.create(Subscription, {
+        workspaceId: workspace.id,
+        planId: starterPlan.id,
+        provider: PaymentProvider.MANUAL,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: false,
+      }),
+    );
     await manager.save(
       manager.create(WorkspaceMember, {
         workspaceId: workspace.id,

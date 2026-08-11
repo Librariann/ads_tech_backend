@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { RedisModule } from './redis/redis.module';
 import { databaseEntities } from './database/entities';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
       }),
     }),
     RedisModule,
+    BillingModule,
     UsersModule,
     AuthModule,
     WorkspacesModule,
